@@ -29,8 +29,8 @@ const tools = [
     title: "String Tension Calculator",
     description:
       "Estimate a suitable string tension based on power, control, comfort and spin.",
-    href: "#",
-    status: "Coming soon",
+    href: "/string-tension",
+    status: "Available",
     tag: "Tension",
   },
 ];
