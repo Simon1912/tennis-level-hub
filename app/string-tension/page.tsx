@@ -111,6 +111,49 @@ function round(value: number) {
   return Math.round(value);
 }
 
+function getRecommendedAverage(result: CalculationResult) {
+  if (result.isHybrid) {
+    return (result.main + result.cross) / 2;
+  }
+
+  return result.recommended;
+}
+
+function formatPercent(value: number) {
+  if (value > 0) return `+${value}%`;
+  if (value < 0) return `${value}%`;
+  return "0%";
+}
+
+function getExpectedChanges(currentTension: number, result: CalculationResult) {
+  const recommendedAverage = getRecommendedAverage(result);
+  const difference = recommendedAverage - currentTension;
+
+  return [
+    {
+      label: "Power",
+      value: Math.round(clamp(-difference * 2.5, -25, 25)),
+      explanation: "Lower tension usually gives easier depth and pace.",
+    },
+    {
+      label: "Spin potential",
+      value: Math.round(clamp(-difference * 1.7, -18, 18)),
+      explanation: "Lower tension can help string movement and snapback.",
+    },
+    {
+      label: "Comfort",
+      value: Math.round(clamp(-difference * 2.2, -25, 25)),
+      explanation: "Lower tension usually reduces impact shock.",
+    },
+    {
+      label: "Control",
+      value: Math.round(clamp(difference * 1.3, -18, 18)),
+      explanation:
+        "Higher tension usually gives a firmer, more controlled response.",
+    },
+  ];
+}
+
 function getConfidence(
   goal: MainGoal,
   problem: CurrentProblem,
@@ -260,6 +303,7 @@ function calculateTension(
 
 export default function StringTensionPage() {
   const [setup, setSetup] = useState<StringSetup>("polyester");
+  const [currentTension, setCurrentTension] = useState("");
   const [level, setLevel] = useState<PlayerLevel>("club");
   const [style, setStyle] = useState<PlayingStyle>("allround");
   const [goal, setGoal] = useState<MainGoal>("balanced");
@@ -284,6 +328,15 @@ export default function StringTensionPage() {
     armPain,
     stringBreaker
   );
+
+  const currentTensionNumber = Number(currentTension);
+
+  const hasCurrentTension =
+    currentTension.trim() !== "" && !Number.isNaN(currentTensionNumber);
+
+  const expectedChanges = hasCurrentTension
+    ? getExpectedChanges(currentTensionNumber, result)
+    : [];
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -318,6 +371,25 @@ export default function StringTensionPage() {
                 onChange={(value) => setSetup(value as StringSetup)}
                 options={setupLabels}
               />
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  What tension are you currently using? Optional
+                </label>
+
+                <input
+                  value={currentTension}
+                  onChange={(event) => setCurrentTension(event.target.value)}
+                  type="number"
+                  step="0.5"
+                  placeholder="Example: 54"
+                  className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                />
+
+                <p className="mt-2 text-xs text-slate-500">
+                  If you use a hybrid setup, enter your average or main tension.
+                </p>
+              </div>
 
               <SelectField
                 label="What is your playing level?"
@@ -399,9 +471,7 @@ export default function StringTensionPage() {
                     Recommended tension
                   </p>
 
-                  <h2 className="mt-2 text-3xl font-bold">
-                    {profile.label}
-                  </h2>
+                  <h2 className="mt-2 text-3xl font-bold">{profile.label}</h2>
                 </div>
 
                 <div className="rounded-full bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-300">
@@ -447,6 +517,61 @@ export default function StringTensionPage() {
                   firmer and is usually strung lower than multifilament or
                   natural gut.
                 </p>
+              )}
+
+              {hasCurrentTension && (
+                <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900 p-5">
+                  <p className="text-sm uppercase tracking-[0.2em] text-emerald-400">
+                    Compared to your current setup
+                  </p>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <Info
+                      label="Current tension"
+                      value={`${currentTensionNumber} lbs`}
+                    />
+
+                    <Info
+                      label="Recommended average"
+                      value={`${Math.round(getRecommendedAverage(result))} lbs`}
+                    />
+                  </div>
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    {expectedChanges.map((change) => (
+                      <div
+                        key={change.label}
+                        className="rounded-xl bg-white/5 p-4"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-semibold">{change.label}</p>
+
+                          <p
+                            className={`font-bold ${
+                              change.value > 0
+                                ? "text-emerald-300"
+                                : change.value < 0
+                                ? "text-red-300"
+                                : "text-slate-300"
+                            }`}
+                          >
+                            {formatPercent(change.value)}
+                          </p>
+                        </div>
+
+                        <p className="mt-2 text-sm text-slate-400">
+                          {change.explanation}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="mt-4 text-xs text-slate-500">
+                    These percentages are rough estimates, not exact
+                    measurements. Real changes depend on racket, string, gauge
+                    and technique.
+                  </p>
+                </div>
               )}
             </div>
 
@@ -555,6 +680,17 @@ function TensionCard({
       <p className="mt-2 text-sm text-slate-400">
         Suggested range: {range}
       </p>
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-white/5 p-3">
+      <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 font-semibold text-white">{value}</p>
     </div>
   );
 }
