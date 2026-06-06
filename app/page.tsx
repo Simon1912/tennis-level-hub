@@ -21,8 +21,8 @@ const tools = [
     title: "String Finder",
     description:
       "Find string types that fit your game, from comfort multis to spin-friendly polys.",
-    href: "#",
-    status: "Coming soon",
+    href: "/string-finder",
+    status: "Available",
     tag: "Strings",
   },
   {
